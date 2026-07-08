@@ -1,0 +1,11 @@
+# Config locale
+.env
+
+# WAR/webapps déployés (générés)
+/webapps/*
+!/webapps/.gitkeep
+
+# Dumps de base locaux (déposés par l'utilisateur)
+/db-init/*.sql
+/db-init/*.sql.gz
+/db-init/*.sh

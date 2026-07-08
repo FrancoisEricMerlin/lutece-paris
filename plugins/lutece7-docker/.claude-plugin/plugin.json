@@ -1,0 +1,12 @@
+{
+  "name": "lutece7-docker",
+  "displayName": "Lutece 7 — Environnement Docker",
+  "version": "1.0.0",
+  "description": "Déploie un environnement de développement local Lutece 7 avec Docker (Tomcat 9/JDK17 + MariaDB), datasource JNDI jdbc/CORE, et l'autorité de certification de la Mairie de Paris importée dans le cacerts de la JVM.",
+  "author": {
+    "name": "François Merlin",
+    "email": "FrancoisEric.Merlin@paris.fr"
+  },
+  "keywords": ["lutece", "lutece7", "docker", "tomcat", "mariadb", "paris"],
+  "license": "GPL-2.0"
+}

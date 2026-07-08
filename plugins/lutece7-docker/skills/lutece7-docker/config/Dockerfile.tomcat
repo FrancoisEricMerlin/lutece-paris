@@ -1,0 +1,26 @@
+# Image Tomcat pour Lutece 7 avec l'autorité de certification de la Mairie de Paris
+# importée dans le truststore de la JVM (cacerts).
+#
+# Tomcat 9 (servlet javax, requis par Lutece 7) sur JDK 17 (certaines libs Lutece
+# — grubusiness/library-notifygru — sont compilées en Java 17).
+ARG TOMCAT_IMAGE=tomcat:9.0-jdk17-temurin
+FROM ${TOMCAT_IMAGE}
+
+# Autorité(s) de certification à ajouter au truststore JVM.
+# Tout fichier PEM déposé dans certs/ est importé (permet d'en ajouter d'autres).
+COPY certs/ /tmp/lutece-certs/
+
+# Import dans $JAVA_HOME/lib/security/cacerts (mot de passe par défaut : changeit).
+# -noprompt + -trustcacerts ; alias dérivé du nom de fichier (espaces -> _).
+RUN set -eu; \
+    for c in /tmp/lutece-certs/*; do \
+      [ -f "$c" ] || continue; \
+      alias="$(basename "$c" | tr ' ' '_')"; \
+      echo "Import CA: $alias"; \
+      keytool -importcert -noprompt -trustcacerts \
+        -alias "$alias" \
+        -file "$c" \
+        -keystore "$JAVA_HOME/lib/security/cacerts" \
+        -storepass changeit; \
+    done; \
+    rm -rf /tmp/lutece-certs

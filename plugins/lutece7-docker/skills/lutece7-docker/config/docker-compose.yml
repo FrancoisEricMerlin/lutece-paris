@@ -1,0 +1,76 @@
+# ============================================================================
+# Environnement de développement local pour sites Lutece 7
+#   - tomcat  : Tomcat 9 / JDK 17, image construite localement pour importer
+#               l'AC RACINE MAIRIE DE PARIS dans le cacerts de la JVM
+#               (Lutece 7 = javax.servlet, incompatible Tomcat 10+)
+#   - mariadb : MariaDB 10.11
+#
+# Datasource : le site doit être buildé avec le profil `dev` (JNDI jdbc/CORE).
+# La ressource JNDI est fournie par tomcat/conf/context.xml et pointe sur le
+# conteneur `mariadb`. Les credentials proviennent du .env via propriétés système.
+# ============================================================================
+
+services:
+
+  mariadb:
+    image: ${MARIADB_IMAGE}
+    container_name: lutece7-mariadb
+    restart: unless-stopped
+    environment:
+      MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+      MARIADB_DATABASE: ${DB_NAME}
+      MARIADB_USER: ${DB_USER}
+      MARIADB_PASSWORD: ${DB_PASSWORD}
+      TZ: ${TZ}
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --max_allowed_packet=256M
+    ports:
+      - "${DB_PORT}:3306"
+    volumes:
+      - mariadb-data:/var/lib/mysql
+      # Dumps *.sql / *.sql.gz déposés ici -> chargés au 1er démarrage (base vide).
+      - ./db-init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  tomcat:
+    build:
+      context: .
+      dockerfile: Dockerfile.tomcat
+      args:
+        TOMCAT_IMAGE: ${TOMCAT_IMAGE}
+    image: lutece7-tomcat-cacerts:local
+    container_name: lutece7-tomcat
+    restart: unless-stopped
+    depends_on:
+      mariadb:
+        condition: service_healthy
+    environment:
+      TZ: ${TZ}
+      # Propriétés système lues par tomcat/conf/context.xml (${db.url} etc.)
+      # NB: l'URL est entre quotes simples car catalina.sh eval JAVA_OPTS et les
+      #     '&' de l'URL JDBC seraient sinon interprétés par le shell.
+      JAVA_OPTS: "-Duser.timezone=${TZ} -Ddb.url='jdbc:mysql://mariadb:3306/${DB_NAME}?autoReconnect=true&useUnicode=yes&characterEncoding=utf8&serverTimezone=${TZ}' -Ddb.user=${DB_USER} -Ddb.password=${DB_PASSWORD} -Xms512m -Xmx2g"
+      # Débogage distant (attachez votre IDE sur TOMCAT_DEBUG_PORT)
+      JPDA_ADDRESS: "*:8000"
+      JPDA_TRANSPORT: dt_socket
+    command: ["catalina.sh", "jpda", "run"]
+    ports:
+      - "${TOMCAT_HTTP_PORT}:8080"
+      - "${TOMCAT_DEBUG_PORT}:8000"
+    volumes:
+      # Déposez ici le webapp du site (répertoire explosé target/lutece renommé
+      # en <artifactId-version>, ou un .war) -> Tomcat auto-déploie le contexte.
+      - ./webapps:/usr/local/tomcat/webapps
+      # Datasource JNDI globale jdbc/CORE (appliquée à toutes les webapps)
+      - ./tomcat/conf/context.xml:/usr/local/tomcat/conf/context.xml:ro
+      # Driver JDBC (requis au niveau conteneur pour une Resource globale)
+      - ./tomcat/lib/mysql-connector-j-9.5.0.jar:/usr/local/tomcat/lib/mysql-connector-j-9.5.0.jar:ro
+
+volumes:
+  mariadb-data:

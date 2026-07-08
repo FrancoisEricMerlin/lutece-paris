@@ -1,0 +1,18 @@
+{
+  "name": "lutece-paris",
+  "owner": {
+    "name": "François Merlin",
+    "email": "FrancoisEric.Merlin@paris.fr"
+  },
+  "description": "Plugins Claude Code pour le développement Lutece à la Mairie de Paris",
+  "metadata": {
+    "pluginRoot": "./plugins"
+  },
+  "plugins": [
+    {
+      "name": "lutece7-docker",
+      "source": "./plugins/lutece7-docker",
+      "description": "Environnement Docker de dev Lutece 7 (Tomcat 9/JDK17 + MariaDB + CA Mairie de Paris)"
+    }
+  ]
+}
