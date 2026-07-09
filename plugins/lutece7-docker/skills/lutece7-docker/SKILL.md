@@ -23,6 +23,7 @@ Ce skill déploie un environnement local **réutilisable** pour des sites **Lute
 - **db-init/** — dumps `*.sql` chargés au 1er boot (sinon base vide)
 - **webapps/** — dépôt du webapp du site déployé
 - **bin/deploy-site.sh** — build (profil `dev`) + déploiement d'un site
+- **bin/reset-admin.sh** — réinitialise le mot de passe admin (`core_admin_user`) à `adminadmin`
 
 ## Prérequis
 
@@ -82,6 +83,26 @@ Contexte = `WEBAPP_NAME` (défaut **`lutece`**), port par défaut `8080` :
 
   Logs: docker compose logs -f tomcat
 ```
+
+## Réinitialiser le mot de passe admin (accès local)
+
+Après chargement d'un dump, les mots de passe des comptes admin sont inconnus.
+`bin/reset-admin.sh` remet un mot de passe connu dans `core_admin_user` en exploitant
+le format `PLAINTEXT:` reconnu par Lutece (pas de hash PBKDF2 à calculer).
+
+```bash
+cd "$DEST"
+bin/reset-admin.sh                 # compte 'admin' -> adminadmin (défaut)
+bin/reset-admin.sh all             # TOUS les comptes -> adminadmin
+bin/reset-admin.sh admin s3cret    # compte 'admin' -> s3cret
+```
+
+L'UPDATE met aussi `reset_password=0` et annule les dates d'expiration
+(`password_max_valid_date`, `account_max_valid_date`) pour éviter tout blocage.
+
+> Nécessite que le back-office utilise l'**auth base de données** Lutece. Si le site
+> délègue l'auth admin au SSO/identity-store de la Ville, basculez d'abord sur l'auth
+> BD (surcharges `mylutece*`/`AdminAuthenticationService`).
 
 ## Convention de déploiement des sites
 
