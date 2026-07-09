@@ -3,48 +3,47 @@
 # Build un site Lutece 7 (profil dev) et le déploie dans webapps/.
 #
 # Usage:
-#   bin/deploy-site.sh /chemin/vers/le/site-lutece [profil-maven]
+#   bin/deploy-site.sh /chemin/vers/le/site-lutece [profil-maven] [nom-webapp]
 #
-# Exemple:
+# Exemples:
 #   bin/deploy-site.sh ~/src/gitlab/c80/site-decider
+#   bin/deploy-site.sh ~/src/gitlab/c80/site-decider dev monsite
+#   WEBAPP_NAME=monsite bin/deploy-site.sh ~/src/gitlab/c80/site-decider
+#
+# Nom de la webapp (= contexte Tomcat) : paramétrable via WEBAPP_NAME (.env ou
+# variable d'environnement) ou 3e argument. Défaut : `lutece` -> contexte /lutece.
 #
 # Profil Maven par défaut : `dev` (datasource JNDI jdbc/CORE), requis en conteneur.
 #
 # Le packaging `lutece-site` ne produit pas de WAR autonome : le webapp complet
 # (core + tous les jars plugins + overlay du site) est assemblé par `lutece:exploded`
-# dans target/lutece. On copie ce répertoire dans webapps/<artifactId-version> ;
-# Tomcat déploie un répertoire explosé comme un contexte.
+# dans target/lutece. On copie ce répertoire dans webapps/<nom-webapp> ; Tomcat
+# déploie un répertoire explosé comme un contexte.
 # ============================================================================
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 WEBAPPS_DIR="$SCRIPT_DIR/webapps"
 
+# Charge .env (WEBAPP_NAME, TOMCAT_HTTP_PORT, ...) s'il existe
+if [[ -f "$SCRIPT_DIR/.env" ]]; then set -a; . "$SCRIPT_DIR/.env"; set +a; fi
+
 SITE_DIR="${1:-}"
 PROFILE="${2:-dev}"
+# Nom de la webapp : 3e arg > WEBAPP_NAME (.env/env) > défaut `lutece`
+CTX="${3:-${WEBAPP_NAME:-lutece}}"
 
 if [[ -z "$SITE_DIR" || ! -f "$SITE_DIR/pom.xml" ]]; then
-  echo "Usage: $0 /chemin/vers/le/site-lutece [profil-maven]" >&2
-  echo "  (le chemin doit contenir un pom.xml)" >&2
+  echo "Usage: $0 /chemin/vers/le/site-lutece [profil-maven] [nom-webapp]" >&2
+  echo "  (le chemin doit contenir un pom.xml ; nom-webapp par défaut: lutece)" >&2
   exit 1
 fi
 
 SITE_DIR="$(cd "$SITE_DIR" && pwd)"
-echo ">> Build du site : $SITE_DIR (profil: $PROFILE)"
-
-pushd "$SITE_DIR" >/dev/null
-
-# Contexte = artifactId-version (résolu depuis le POM effectif)
-ARTIFACT_ID="$(mvn -q -Dexec.executable=echo -Dexec.args='${project.artifactId}' \
-  --non-recursive exec:exec 2>/dev/null | tail -1)"
-VERSION="$(mvn -q -Dexec.executable=echo -Dexec.args='${project.version}' \
-  --non-recursive exec:exec 2>/dev/null | tail -1)"
-CTX="${ARTIFACT_ID}-${VERSION}"
+echo ">> Build du site : $SITE_DIR (profil: $PROFILE, webapp: $CTX)"
 
 # Assemblage du webapp complet dans target/lutece
-mvn -P"$PROFILE" clean lutece:exploded
-
-popd >/dev/null
+( cd "$SITE_DIR" && mvn -P"$PROFILE" clean lutece:exploded )
 
 SRC="$SITE_DIR/target/lutece"
 if [[ ! -d "$SRC" ]]; then

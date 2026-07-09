@@ -64,15 +64,21 @@ cd "$DEST"
 bin/deploy-site.sh /chemin/vers/le/site-lutece
 ```
 
+La webapp est déployée sous le contexte **`lutece`** par défaut (URL `/lutece/...`).
+Pour un autre nom : `WEBAPP_NAME` dans `.env`, ou 3e argument du script :
+```bash
+bin/deploy-site.sh /chemin/vers/le/site-lutece dev monsite   # -> contexte /monsite
+```
+
 Le packaging `lutece-site` **ne produit pas de WAR autonome** : le helper assemble le webapp complet (`core` + jars plugins + overlay) via `mvn -Pdev clean lutece:exploded` (→ `target/lutece`) et copie ce répertoire dans `webapps/<artifactId-version>`. Tomcat déploie un répertoire explosé comme un contexte.
 
 ## Après démarrage
 
-Contexte = `<artifactId>-<version>` (ex. `site-decider-3.0.0`), port par défaut `8080` :
+Contexte = `WEBAPP_NAME` (défaut **`lutece`**), port par défaut `8080` :
 
 ```
-  Front office  http://localhost:8080/<contexte>/jsp/site/Portal.jsp
-  Back office   http://localhost:8080/<contexte>/jsp/admin/AdminMenu.jsp
+  Front office  http://localhost:8080/lutece/jsp/site/Portal.jsp
+  Back office   http://localhost:8080/lutece/jsp/admin/AdminMenu.jsp
 
   Logs: docker compose logs -f tomcat
 ```
