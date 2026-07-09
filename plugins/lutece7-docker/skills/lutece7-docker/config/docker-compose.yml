@@ -72,5 +72,22 @@ services:
       # Driver JDBC (requis au niveau conteneur pour une Resource globale)
       - ./tomcat/lib/mysql-connector-j-9.5.0.jar:/usr/local/tomcat/lib/mysql-connector-j-9.5.0.jar:ro
 
+  # SERVICE OPTIONNEL : SOLR local pour la recherche (plugin search-solr).
+  # Ne démarre QU'AVEC le profil `solr` :  docker compose --profile solr up -d
+  # Le core est créé depuis le configset Lutece bundlé (solr/conf/).
+  # Pointez ensuite le site vers http://solr:8983/solr/${SOLR_CORE} (sans auth).
+  solr:
+    image: ${SOLR_IMAGE:-solr:8.11}
+    container_name: lutece7-solr
+    profiles: ["solr"]
+    restart: unless-stopped
+    ports:
+      - "${SOLR_PORT:-8983}:8983"
+    volumes:
+      - solr-data:/var/solr
+      - ./solr:/lutece-configset:ro
+    command: ["solr-precreate", "${SOLR_CORE:-decider}", "/lutece-configset"]
+
 volumes:
   mariadb-data:
+  solr-data:

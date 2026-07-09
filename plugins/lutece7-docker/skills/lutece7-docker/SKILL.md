@@ -20,6 +20,7 @@ Ce skill déploie un environnement local **réutilisable** pour des sites **Lute
 - **.env.example** — ports, nom BDD, credentials, versions d'images
 - **tomcat/conf/context.xml** — Resource JNDI `jdbc/CORE` (valeurs via propriétés système `-Ddb.*`)
 - **tomcat/lib/mysql-connector-j-9.5.0.jar** — driver JDBC (requis au niveau conteneur)
+- **solr/conf/** — configset Lutece (schema.xml/solrconfig) pour le service SOLR optionnel
 - **db-init/** — dumps `*.sql` chargés au 1er boot (sinon base vide)
 - **webapps/** — dépôt du webapp du site déployé
 - **bin/deploy-site.sh** — build (profil `dev`) + déploiement d'un site
@@ -83,6 +84,31 @@ Contexte = `WEBAPP_NAME` (défaut **`lutece`**), port par défaut `8080` :
 
   Logs: docker compose logs -f tomcat
 ```
+
+## SOLR local (optionnel)
+
+Le plugin `search-solr` interroge un SOLR externe (Ville), injoignable en local. Un
+SOLR local optionnel (SOLR 8.11, core créé depuis le configset Lutece bundlé) permet
+de faire fonctionner la recherche. **Il ne démarre qu'avec le profil `solr`** :
+
+```bash
+cd "$DEST"
+docker compose --profile solr up -d          # démarre aussi le service solr
+# Admin SOLR : http://localhost:8983/solr/  (core: ${SOLR_CORE:-decider})
+```
+
+Puis pointez le site vers ce SOLR (surcharge `search-solr.properties` du webapp déployé) —
+depuis le conteneur Tomcat, l'hôte est `solr`, sans authentification :
+
+```properties
+solr.server.address=http://solr:8983/solr/decider
+solr.httpBasicAuthUser=
+solr.httpBasicAuthPassword=
+```
+
+Réglages dans `.env` : `SOLR_IMAGE`, `SOLR_PORT`, `SOLR_CORE` (le core doit correspondre
+au chemin configuré dans `solr.server.address`). Pour arrêter juste SOLR :
+`docker compose stop solr`.
 
 ## Réinitialiser le mot de passe admin (accès local)
 
