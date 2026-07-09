@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Solr managed schema - automatically generated - DO NOT EDIT -->
+<schema name="lutece" version="1.5">
+  <uniqueKey>uid</uniqueKey>
+  <fieldType name="_nest_path_" class="solr.NestPathField" maxCharsForDocValues="-1" omitNorms="true" omitTermFreqAndPositions="true" stored="true" multiValued="false"/>
+  <fieldType name="binary" class="solr.BinaryField"/>
+  <fieldType name="boolean" class="solr.BoolField" sortMissingLast="true"/>
+  <fieldType name="date" class="solr.TrieDateField" positionIncrementGap="0" precisionStep="0"/>
+  <fieldType name="double" class="solr.TrieDoubleField" positionIncrementGap="0" precisionStep="0"/>
+  <fieldType name="float" class="solr.TrieFloatField" positionIncrementGap="0" precisionStep="0"/>
+  <fieldType name="foTagPipeDelimited" class="solr.TextField">
+    <analyzer>
+      <tokenizer class="solr.PatternTokenizerFactory" pattern="\|"/>
+    </analyzer>
+  </fieldType>
+  <fieldType name="geoloc" class="solr.LatLonType" subFieldSuffix="_coordinate"/>
+  <fieldType name="int" class="solr.TrieIntField" positionIncrementGap="0" precisionStep="0"/>
+  <fieldType name="long" class="solr.TrieLongField" positionIncrementGap="0" precisionStep="0"/>
+  <fieldType name="random" class="solr.RandomSortField" indexed="true"/>
+  <fieldType name="string" class="solr.StrField" sortMissingLast="true"/>
+  <fieldType name="string_without_accents" class="solr.TextField">
+    <analyzer type="index">
+      <charFilter class="solr.PatternReplaceCharFilterFactory" pattern="[^A-Za-z0-9]" replacement=""/>
+      <tokenizer class="solr.KeywordTokenizerFactory"/>
+      <filter class="solr.ASCIIFoldingFilterFactory"/>
+      <filter class="solr.TrimFilterFactory"/>
+      <filter class="solr.LowerCaseFilterFactory"/>
+    </analyzer>
+    <analyzer type="query">
+      <charFilter class="solr.PatternReplaceCharFilterFactory" pattern="[^A-Za-z0-9]" replacement=""/>
+      <tokenizer class="solr.KeywordTokenizerFactory"/>
+      <filter class="solr.ASCIIFoldingFilterFactory"/>
+      <filter class="solr.TrimFilterFactory"/>
+      <filter class="solr.LowerCaseFilterFactory"/>
+    </analyzer>
+  </fieldType>
+  <fieldType name="text" class="solr.TextField">
+    <analyzer>
+      <charFilter class="solr.MappingCharFilterFactory" mapping="mapping-ISOLatin1Accent.txt"/>
+      <tokenizer class="solr.StandardTokenizerFactory"/>
+      <filter class="solr.ElisionFilterFactory" articles="lang/contractions_fr.txt" ignoreCase="true"/>
+      <filter class="solr.LowerCaseFilterFactory"/>
+      <filter class="solr.StopFilterFactory" format="snowball" words="lang/stopwords_fr.txt" ignoreCase="true"/>
+      <filter class="solr.KeywordMarkerFilterFactory" protected="lang/protwords.txt"/>
+      <filter class="solr.FrenchLightStemFilterFactory"/>
+    </analyzer>
+  </fieldType>
+  <field name="_nest_parent_" type="string" uninvertible="true" indexed="true" stored="true"/>
+  <field name="_nest_path_" type="string" uninvertible="true" indexed="true" stored="true"/>
+  <field name="_root_" type="string" uninvertible="true" indexed="true" stored="true"/>
+  <field name="_version_" type="string" uninvertible="true" indexed="true" stored="true"/>
+  <field name="categorie" type="string" uninvertible="false" multiValued="true" indexed="true" stored="true"/>
+  <field name="content" type="text" uninvertible="true" multiValued="false" indexed="true" stored="true"/>
+  <field name="date" type="date" indexed="true" stored="true"/>
+  <field name="document_portlet_id" type="string" indexed="true" stored="true"/>
+  <field name="email_text" type="string" indexed="false" stored="false"/>
+  <field name="file_content" type="text" uninvertible="false" indexed="true" stored="true"/>
+  <field name="hiedate" type="string" indexed="true" stored="true"/>
+  <field name="id_resource" type="string" uninvertible="true" indexed="true" stored="true"/>
+  <field name="ipAddress_text" type="string" uninvertible="false" indexed="false" stored="false"/>
+  <field name="luteceUserName_text" type="string" indexed="false" stored="false"/>
+  <field name="metadata" type="string" indexed="true" stored="true"/>
+  <field name="name_text" type="string" indexed="false" stored="false"/>
+  <field name="role" type="string" indexed="true" stored="true"/>
+  <field name="site" type="string" indexed="true" stored="true"/>
+  <field name="summary" type="text" indexed="true" stored="true"/>
+  <field name="text" type="text" uninvertible="true" indexed="true" stored="true"/>
+  <field name="title" type="text" indexed="true" stored="true"/>
+  <field name="titre" type="string_without_accents" indexed="true" stored="false"/>
+  <field name="type" type="string" indexed="true" stored="true"/>
+  <field name="uid" type="string" multiValued="false" indexed="true" required="true" stored="true"/>
+  <field name="url" type="text" indexed="true" stored="true"/>
+  <field name="userGuid_text" type="text" uninvertible="false" indexed="false" stored="false"/>
+  <field name="xml_content" type="text" indexed="true" stored="true"/>
+  <dynamicField name="*_geoloc_0_coordinate" type="double" indexed="true" stored="true"/>
+  <dynamicField name="*_geoloc_1_coordinate" type="double" indexed="true" stored="true"/>
+  <dynamicField name="*_fotag_text" type="foTagPipeDelimited" indexed="true" stored="true"/>
+  <dynamicField name="*_list_date" type="date" indexed="true" stored="true"/>
+  <dynamicField name="*_geolayer" type="string" indexed="true" stored="true"/>
+  <dynamicField name="*_geojson" type="string" indexed="false" stored="true"/>
+  <dynamicField name="*_string" type="string" indexed="true" stored="true"/>
+  <dynamicField name="*_geoloc" type="geoloc" indexed="true" stored="true"/>
+  <dynamicField name="*_random" type="random" indexed="true" stored="false"/>
+  <dynamicField name="random*" type="random" uninvertible="true" omitTermFreqAndPositions="true" indexed="true" stored="false"/>
+  <dynamicField name="*_text" type="string" indexed="true" stored="true"/>
+  <dynamicField name="*_date" type="date" indexed="true" stored="true"/>
+  <dynamicField name="*_long" type="long" indexed="true" stored="true"/>
+  <dynamicField name="*_list" type="text" indexed="true" stored="true"/>
+  <copyField source="file_content" dest="text"/>
+  <copyField source="metadata" dest="text"/>
+  <copyField source="summary" dest="text"/>
+  <copyField source="title" dest="titre"/>
+</schema>

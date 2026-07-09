@@ -20,7 +20,7 @@ Ce skill déploie un environnement local **réutilisable** pour des sites **Lute
 - **.env.example** — ports, nom BDD, credentials, versions d'images
 - **tomcat/conf/context.xml** — Resource JNDI `jdbc/CORE` (valeurs via propriétés système `-Ddb.*`)
 - **tomcat/lib/mysql-connector-j-9.5.0.jar** — driver JDBC (requis au niveau conteneur)
-- **solr/conf/** — configset Lutece (schema.xml/solrconfig) pour le service SOLR optionnel
+- **solr/conf/** — configset SOLR de recette (managed-schema `lutece`, solrconfig, analyzers FR, `lang/`) pour le service SOLR optionnel ; `random` fieldType ramené sur la classe standard `solr.RandomSortField` (le `BpRandomSortField` custom n'existe que sur le serveur Ville)
 - **db-init/** — dumps `*.sql` chargés au 1er boot (sinon base vide)
 - **webapps/** — dépôt du webapp du site déployé
 - **bin/deploy-site.sh** — build (profil `dev`) + déploiement d'un site
