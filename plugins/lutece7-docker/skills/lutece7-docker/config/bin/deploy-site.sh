@@ -54,7 +54,15 @@ fi
 
 DEST="$WEBAPPS_DIR/$CTX"
 echo ">> Déploiement : $DEST"
-rm -rf "$DEST"
+# Le conteneur Tomcat (root) peut avoir écrit des fichiers runtime dans le webapp
+# monté (embedded SOLR, opt/…) que l'utilisateur hôte ne peut pas supprimer.
+# On tente un rm normal, puis on retombe sur une suppression via conteneur root.
+if [ -e "$DEST" ]; then
+  rm -rf "$DEST" 2>/dev/null || {
+    echo ">> fichiers root-owned détectés — suppression via conteneur"
+    docker run --rm -v "$WEBAPPS_DIR":/w busybox rm -rf "/w/$CTX"
+  }
+fi
 cp -r "$SRC" "$DEST"
 
 PORT="${TOMCAT_HTTP_PORT:-8080}"
