@@ -159,6 +159,7 @@ mysql -h 127.0.0.1 -P 3307 -u lutece -plutece lutece   # accès BDD direct
 ## Dépannage
 
 - **`UnsupportedClassVersionError` (class file 61.0)** — une lib est compilée en Java 17 ; l'image est bien en JDK 17 (`TOMCAT_IMAGE=tomcat:9.0-jdk17-temurin`).
+- **500 `cannot access class sun.security.util.HostnameChecker` / `SSLProtocolSocketFactory`** — l'ancien `commons-httpclient` (via `HttpAccess`, ex. plugin openagenda) accède à une classe interne du JDK bloquée par l'encapsulation Java 17. Corrigé par `--add-exports=java.base/sun.security.util=ALL-UNNAMED` dans `JAVA_OPTS` (déjà présent dans le compose).
 - **Front redirige vers `*.paris.mdp` / back office « Error loading user information »** — le profil `dev` route l'auth via le SSO/identity-store de la Ville, injoignable hors réseau interne. Pour un usage 100 % local, basculer sur l'auth base de données (surcharges `mylutece*.properties`, `oauth2`, `identitystore*` dans le webapp déployé).
 - **Conflits de dépendances Maven au build du site** — le POM du site abuse souvent de ranges ouverts `[x,)` sur des plugins passés en Lutece 8. Figer les versions fautives sur leur dernière release core 7 ; le jeu de référence est celui de recette/prod.
 - **`keytool` échoue au build** — vérifier que `certs/` contient bien un PEM valide ; mot de passe cacerts par défaut `changeit`.

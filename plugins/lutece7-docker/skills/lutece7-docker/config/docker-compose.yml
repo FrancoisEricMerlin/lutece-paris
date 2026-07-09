@@ -55,7 +55,7 @@ services:
       # Propriétés système lues par tomcat/conf/context.xml (${db.url} etc.)
       # NB: l'URL est entre quotes simples car catalina.sh eval JAVA_OPTS et les
       #     '&' de l'URL JDBC seraient sinon interprétés par le shell.
-      JAVA_OPTS: "-Duser.timezone=${TZ} -Ddb.url='jdbc:mysql://mariadb:3306/${DB_NAME}?autoReconnect=true&useUnicode=yes&characterEncoding=utf8&serverTimezone=${TZ}' -Ddb.user=${DB_USER} -Ddb.password=${DB_PASSWORD} -Xms512m -Xmx2g"
+      JAVA_OPTS: "-Duser.timezone=${TZ} -Ddb.url='jdbc:mysql://mariadb:3306/${DB_NAME}?autoReconnect=true&useUnicode=yes&characterEncoding=utf8&serverTimezone=${TZ}' -Ddb.user=${DB_USER} -Ddb.password=${DB_PASSWORD} -Xms512m -Xmx2g --add-exports=java.base/sun.security.util=ALL-UNNAMED"
       # Débogage distant (attachez votre IDE sur TOMCAT_DEBUG_PORT)
       JPDA_ADDRESS: "*:8000"
       JPDA_TRANSPORT: dt_socket
