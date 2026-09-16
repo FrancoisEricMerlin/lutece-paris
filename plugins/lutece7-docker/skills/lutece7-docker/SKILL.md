@@ -25,6 +25,7 @@ Ce skill déploie un environnement local **réutilisable** pour des sites **Lute
 - **webapps/** — dépôt du webapp du site déployé
 - **bin/deploy-site.sh** — build (profil `dev`) + déploiement d'un site
 - **bin/reset-admin.sh** — réinitialise le mot de passe admin (`core_admin_user`) à `adminadmin`
+- **bin/webapps.sh** — liste les webapps déployés (contexte, taille, base, état HTTP, Liquibase) et supprime un contexte, avec ou sans sa base dédiée
 
 ## Prérequis
 
@@ -144,6 +145,32 @@ docker compose exec tomcat keytool -list \
   | grep -i paris
 ```
 
+## Webapps déployés : lister et supprimer
+
+Chaque répertoire de `webapps/` est un contexte Tomcat, **redéployé à chaque redémarrage du
+conteneur** (le temps de démarrage est proportionnel au nombre de webapps). Les webapps
+s'accumulent au fil des tests (déploiements par `deploy-site.sh`, copies manuelles) :
+
+```bash
+bin/webapps.sh                                # liste : contexte, taille, date, base, état HTTP, Liquibase
+bin/webapps.sh --remove <contexte>            # supprime webapps/<contexte>, confirmation demandée
+bin/webapps.sh --remove <contexte> --drop-db  # ... et sa base DÉDIÉE (jamais la base partagée ${DB_NAME})
+```
+
+- **État HTTP** : `démarré` (200 ou 302 sur `/jsp/site/Portal.jsp`, le 302 étant la redirection
+  d'authentification), `absent` (404, répertoire présent mais contexte non déployé), `tomcat ?`
+  (conteneur injoignable).
+- **Base** : lue dans `META-INF/context.xml` du webapp quand il porte une datasource dédiée,
+  sinon la base partagée `${DB_NAME}` du `context.xml` global (`jdbc/CORE`).
+- Tomcat **dédéploie de lui-même** un contexte dont le répertoire disparaît : pas de redémarrage
+  après une suppression.
+
+**Conduite pour l'assistant** : quand l'utilisateur demande quels sites tournent, ou de faire du
+ménage, lancer `bin/webapps.sh` et présenter la liste. Une suppression est destructive : ne la
+proposer que webapp par webapp, en rappelant la base associée, et **n'exécuter `--remove` qu'après
+l'accord explicite de l'utilisateur sur le contexte nommé** ; `--drop-db` seulement s'il le demande
+expressément ; ne jamais utiliser `-y` à sa place.
+
 ## Commandes utiles
 
 ```bash
@@ -151,6 +178,7 @@ docker compose up -d --build        # (re)construire + démarrer
 docker compose logs -f tomcat       # logs Tomcat / Lutece
 docker compose ps                   # état des conteneurs
 docker compose restart tomcat       # redéployer après copie d'un webapp
+bin/webapps.sh                      # lister les webapps déployés / bin/webapps.sh --remove <ctx>
 docker compose down                 # arrêter (conserve les données)
 docker compose down -v              # arrêter + supprimer la base
 mysql -h 127.0.0.1 -P 3307 -u lutece -plutece lutece   # accès BDD direct
