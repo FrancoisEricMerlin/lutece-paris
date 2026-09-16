@@ -24,6 +24,7 @@ WEBAPPS_DIR="$SCRIPT_DIR/webapps"
 PORT="${TOMCAT_HTTP_PORT:-8080}"
 SHARED_DB="${DB_NAME:-lutece}"
 MARIADB_CONTAINER="${MARIADB_CONTAINER:-lutece7-mariadb}"
+TOMCAT_CONTAINER="${TOMCAT_CONTAINER:-lutece7-tomcat}"
 
 # Base ciblée par un webapp : datasource dédiée (META-INF/context.xml) sinon la base partagée
 webapp_db() {
@@ -81,7 +82,13 @@ remove_webapp() {
     read -r -p "Confirmer ? [o/N] " answer
     [[ "$answer" =~ ^[oOyY]$ ]] || { echo "Annulé."; exit 0; }
   fi
-  rm -rf "$WEBAPPS_DIR/$ctx"
+  # Tomcat (root dans le conteneur) crée des fichiers root-owned (index Lucene, work/) : si la
+  # suppression locale échoue, supprimer depuis le conteneur, où le répertoire est monté.
+  if ! rm -rf "$WEBAPPS_DIR/$ctx" 2>/dev/null; then
+    echo ">> Fichiers root-owned : suppression depuis le conteneur $TOMCAT_CONTAINER"
+    docker exec "$TOMCAT_CONTAINER" rm -rf "/usr/local/tomcat/webapps/$ctx"
+  fi
+  [[ -e "$WEBAPPS_DIR/$ctx" ]] && { echo "!! webapps/$ctx n'a pas pu être supprimé entièrement" >&2; exit 1; }
   echo ">> webapps/$ctx supprimé ; Tomcat dédéploie le contexte /$ctx de lui-même."
   if [[ "$drop_db" == 1 ]]; then
     docker exec "$MARIADB_CONTAINER" sh -c 'mysql -uroot -p"$MARIADB_ROOT_PASSWORD" -e "DROP DATABASE IF EXISTS \`'"$db"'\`"'
