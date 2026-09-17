@@ -1,8 +1,8 @@
 {
   "name": "lutece-dump-tools",
   "displayName": "Lutece — Outils de dumps SQL",
-  "version": "1.0.1",
-  "description": "Outils de traitement des dumps SQL Lutece (MariaDB/MySQL) : anonymisation déterministe des adresses e-mail pour produire un dump exploitable hors production (dev, recette, tickets).",
+  "version": "1.0.2",
+  "description": "Outils de traitement des dumps SQL Lutece (MariaDB/MySQL) : anonymisation déterministe des adresses e-mail et des GUID d'usagers pour produire un dump exploitable hors production (dev, recette, tickets).",
   "author": {
     "name": "François Merlin",
     "email": "FrancoisEric.Merlin@paris.fr"

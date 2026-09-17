@@ -7,7 +7,7 @@ Marketplace de plugins Claude Code pour le développement Lutece à la Mairie de
 | Plugin | Description |
 |---|---|
 | **lutece7-docker** | Environnement Docker de dev Lutece 7 (Tomcat 9/JDK17 + MariaDB), datasource JNDI `jdbc/CORE`, CA Mairie de Paris dans le cacerts JVM. Fournit les skills `/lutece7-docker:lutece7-docker` et `/lutece7-docker:test-plugin-pr`. |
-| **lutece-dump-tools** | Outils de dumps SQL Lutece. Fournit le skill `/lutece-dump-tools:anonymize-dump-emails` : anonymisation déterministe et en flux des e-mails d'un dump `mysqldump` (`.sql` / `.sql.gz`), sans casser l'échappement SQL ni les jointures. |
+| **lutece-dump-tools** | Outils de dumps SQL Lutece. Fournit le skill `/lutece-dump-tools:anonymize-dump-emails` : anonymisation déterministe et en flux des e-mails et des GUID d'usagers d'un dump `mysqldump` (`.sql` / `.sql.gz`), sans casser l'échappement SQL ni les jointures. |
 
 ## Installation
 
