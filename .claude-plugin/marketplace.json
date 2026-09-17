@@ -13,6 +13,11 @@
       "name": "lutece7-docker",
       "source": "./plugins/lutece7-docker",
       "description": "Environnement Docker de dev Lutece 7 (Tomcat 9/JDK17 + MariaDB + CA Mairie de Paris)"
+    },
+    {
+      "name": "lutece-dump-tools",
+      "source": "./plugins/lutece-dump-tools",
+      "description": "Outils de dumps SQL Lutece : anonymisation déterministe des e-mails (skill anonymize-dump-emails)"
     }
   ]
 }
