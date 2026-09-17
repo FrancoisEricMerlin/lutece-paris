@@ -11,6 +11,26 @@ les GUID d'usagers (UUID 8-4-4-4-12) des tables choisies par des UUID v4 déterm
 Le dump anonymisé se charge ensuite tel quel dans une base locale, par exemple dans
 `db-init/` de l'environnement [[lutece7-docker]].
 
+## Règle : mode minimal, aucune donnée réelle dans la conversation
+
+Le dump est un export de production. Le script s'exécute localement et n'envoie rien, mais
+**tout ce qu'une commande affiche est transmis au modèle**. Par défaut, ne faire remonter que
+des **compteurs et des états**, jamais de valeurs :
+
+- Ne jamais afficher d'adresse e-mail, de GUID, de nom, de login ou de contenu de réponse du
+  dump source, ni le contenu de `--map`. Pas de `head` sur les lignes du dump, pas de listes
+  `sort | uniq -c` de valeurs réelles, pas d'extraits de BLOB.
+- Inventaires (domaines, tables porteuses d'UUID, adresses techniques) : produire **des
+  nombres par table ou par domaine**, pas les valeurs. Si l'utilisateur doit arbitrer sur des
+  valeurs précises (adresses fonctionnelles à préserver), lui indiquer la commande à lancer
+  lui-même dans son terminal (`! …`) plutôt que d'en afficher le résultat.
+- Vérifications de sortie : `grep -c` (nombre de résiduels), `wc -l`, `cmp`, checksums.
+  Les seules valeurs affichables sont les pseudonymes générés (`user_…@example.org`, UUID
+  anonymisés), qui ne sont pas des données personnelles.
+- Écrire les fichiers intermédiaires dans le scratchpad de la session, jamais dans le projet.
+
+L'utilisateur peut lever cette règle explicitement pour une commande donnée.
+
 ## Garanties du script
 
 - **Flux ligne par ligne** : fonctionne sur des dumps de plusieurs Go, mémoire constante
@@ -93,7 +113,7 @@ Puis, base chargée, vérifier quelles colonnes et quelles questions portent ces
    d'usagers doivent aussi être anonymisés : inventorier alors les tables (section précédente).
 2. Lancer le script avec `--salt` si le dump sort du périmètre de l'équipe (ticket,
    prestataire). Sans `--map`, sauf demande explicite.
-3. Lire les statistiques sur stderr. Un message `ATTENTION : N ligne(s) contenant des
+3. Lire les statistiques sur stderr : elles ne contiennent que des compteurs. Un message `ATTENTION : N ligne(s) contenant des
    octets de contrôle ... ont été modifiées` signale qu'un motif ressemblant à un e-mail a
    été remplacé dans un BLOB binaire (PDF, image stockés en base) : comparer ces lignes
    entre source et sortie, et exclure le motif avec `--exclude` si c'est du bruit.
@@ -101,14 +121,16 @@ Puis, base chargée, vérifier quelles colonnes et quelles questions portent ces
    tait sur un dump contenant des BLOB) :
 
    ```bash
-   grep -aoE '[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}' dump.anon.sql \
-     | grep -vE '@example\.org$' | sort | uniq -c | sort -rn | head -30
+   # nombre d'adresses résiduelles (TLD suivi d'un séparateur, ce qui écarte le bruit de BLOB)
+   grep -aoP '[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}(?![A-Za-z0-9-])' dump.anon.sql \
+     | grep -vE '@example\.org$' | grep -cvE '\.\.|@\.'
+   # avec --guid : nombre de GUID d'origine encore présents (liste extraite de la base source, jamais affichée)
+   grep -aciFf guids_source.txt dump.anon.sql
    ```
 
-   Seules les adresses exclues volontairement doivent apparaître. Des résidus du type
-   `Zfj@2jFYuo.fUte` ou `u@m.MOV`, présents en nombre identique, sont du bruit de BLOB
-   binaire que ce grep large attrape mais que le script ignore (TLD suivi de chiffres) :
-   ils existaient déjà dans la source et ne sont pas des adresses.
+   Le résultat attendu est `0`, ou le nombre d'adresses volontairement exclues. En cas de
+   résidu, afficher le **domaine** ou la **table** concernés, pas la valeur. Des résidus du type
+   `x@y..z` sont du bruit de BLOB binaire que le grep large attrape mais que le script ignore.
 5. Rappeler que le compte admin conserve son mot de passe : pour se connecter en local,
    utiliser `reset-admin.sh` du skill [[lutece7-docker]] et retrouver le login dans
    `core_admin_user.access_code` (le login n'est pas l'e-mail).
