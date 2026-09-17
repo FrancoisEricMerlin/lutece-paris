@@ -66,15 +66,23 @@ occurrences conservées) sortent sur **stderr** ; `-q` les masque.
    être préservées (boîtes techniques `noreply@`, comptes de test).
 2. Lancer le script avec `--salt` si le dump sort du périmètre de l'équipe (ticket,
    prestataire). Sans `--map`, sauf demande explicite.
-3. Vérifier qu'il ne reste aucune adresse réelle :
+3. Lire les statistiques sur stderr. Un message `ATTENTION : N ligne(s) contenant des
+   octets de contrôle ... ont été modifiées` signale qu'un motif ressemblant à un e-mail a
+   été remplacé dans un BLOB binaire (PDF, image stockés en base) : comparer ces lignes
+   entre source et sortie, et exclure le motif avec `--exclude` si c'est du bruit.
+4. Vérifier qu'il ne reste aucune adresse réelle (`-a` force le mode texte, sinon grep se
+   tait sur un dump contenant des BLOB) :
 
    ```bash
-   zgrep -oE '[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}' dump.anon.sql.gz \
-     | grep -vE '@example\.org$' | sort | uniq -c | sort -rn | head
+   grep -aoE '[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}' dump.anon.sql \
+     | grep -vE '@example\.org$' | sort | uniq -c | sort -rn | head -30
    ```
 
-   Seules les adresses exclues volontairement doivent apparaître.
-4. Rappeler que le compte admin conserve son mot de passe : pour se connecter en local,
+   Seules les adresses exclues volontairement doivent apparaître. Des résidus du type
+   `Zfj@2jFYuo.fUte` ou `u@m.MOV`, présents en nombre identique, sont du bruit de BLOB
+   binaire que ce grep large attrape mais que le script ignore (TLD suivi de chiffres) :
+   ils existaient déjà dans la source et ne sont pas des adresses.
+5. Rappeler que le compte admin conserve son mot de passe : pour se connecter en local,
    utiliser `reset-admin.sh` du skill [[lutece7-docker]] et retrouver le login dans
    `core_admin_user.access_code` (le login n'est pas l'e-mail).
 
@@ -85,5 +93,8 @@ occurrences conservées) sortent sur **stderr** ; `-q` les masque.
   restent en clair. Pour ces colonnes, compléter par des `UPDATE` ciblés après import.
 - Ne détecte pas les adresses stockées en **binaire ou hexadécimal** (`--hex-blob` sur
   des colonnes texte, BLOB sérialisés, base64).
+- Inversement, un BLOB binaire stocké en clair peut contenir par hasard un motif valide
+  d'e-mail : il serait remplacé et le BLOB corrompu. Le script avertit sur stderr quand
+  une ligne contenant des octets de contrôle est modifiée (voir procédure).
 - Un e-mail scindé sur deux lignes (retour à la ligne dans une valeur `TEXT`) n'est pas
   reconnu. Rare dans un dump `mysqldump` standard, qui échappe `\n`.

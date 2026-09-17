@@ -35,6 +35,9 @@ EMAIL_RE = re.compile(
     r"(?![A-Za-z0-9\-])"
 )
 
+# octets de contrôle : signature d'un BLOB binaire (PDF, image, objet sérialisé) stocké en clair
+CTRL_RE = re.compile(r"[\x00-\x08\x0e-\x1f]")
+
 
 def open_in(path):
     if path in (None, "-"):
@@ -73,7 +76,7 @@ def main():
 
     excludes = [re.compile(r, re.IGNORECASE) for r in args.exclude]
     mapping = {}
-    stats = {"lines": 0, "replaced": 0, "kept": 0}
+    stats = {"lines": 0, "replaced": 0, "kept": 0, "binary_modified": 0}
 
     def anonymize(local, domain):
         original = f"{local}@{domain}"
@@ -99,7 +102,10 @@ def main():
         for line in fin:
             stats["lines"] += 1
             if "@" in line:
-                line = EMAIL_RE.sub(repl, line)
+                new_line = EMAIL_RE.sub(repl, line)
+                if new_line != line and CTRL_RE.search(line):
+                    stats["binary_modified"] += 1
+                line = new_line
             fout.write(line)
 
     if args.map:
@@ -115,6 +121,12 @@ def main():
             f"adresses distinctes anonymisées : {len(mapping)}\n"
             f"occurrences conservées (--exclude) : {stats['kept']}\n"
         )
+        if stats["binary_modified"]:
+            sys.stderr.write(
+                f"ATTENTION : {stats['binary_modified']} ligne(s) contenant des octets de contrôle "
+                "(BLOB binaires ?) ont été modifiées. Un motif ressemblant à un e-mail dans un BLOB "
+                "a pu être remplacé : vérifier ces lignes ou exclure le motif avec --exclude.\n"
+            )
 
 
 if __name__ == "__main__":
