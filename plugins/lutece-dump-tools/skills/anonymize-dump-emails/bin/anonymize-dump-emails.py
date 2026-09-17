@@ -93,8 +93,9 @@ def main():
     excludes = [re.compile(r, re.IGNORECASE) for r in args.exclude]
     guid_tables = {t.lower() for t in args.guid_table}
     mapping = {}
+    mapping_bin = {}
     guid_mapping = {}
-    stats = {"lines": 0, "replaced": 0, "kept": 0, "binary_modified": 0,
+    stats = {"lines": 0, "replaced": 0, "kept": 0, "binary_modified": 0, "binary_resized": 0,
              "guid_replaced": 0, "guid_kept": 0}
 
     def digest(value):
@@ -108,6 +109,30 @@ def main():
         target_domain = domain if args.keep_domain else args.domain
         anon = f"{args.prefix}_{digest(original)[:12]}@{target_domain}"
         mapping[original] = anon
+        return anon
+
+    def anonymize_same_length(local, domain):
+        """Pseudonyme de MÊME LONGUEUR que l'original, pour une adresse en clair dans un fichier
+        binaire (PDF, image, archive) : ne pas décaler les offsets internes du fichier."""
+        original = f"{local}@{domain}"
+        cached = mapping_bin.get(original)
+        if cached is not None:
+            return cached
+        total = len(original)
+        h = digest(original)
+        target_domain = domain if args.keep_domain else args.domain
+        if total - 1 - len(target_domain) < 1:
+            target_domain = "x.fr" if total >= 6 else "fr"   # adresses très courtes
+        local_len = total - 1 - len(target_domain)
+        prefix = args.prefix + "_"
+        if local_len > len(prefix) + 4:
+            local_part = prefix + h[: local_len - len(prefix)]
+        else:
+            local_part = h[:local_len]
+        anon = f"{local_part}@{target_domain}"
+        if len(anon) != total:            # sécurité : ne jamais changer la longueur
+            anon = (anon + h)[:total]
+        mapping_bin[original] = anon
         return anon
 
     def anonymize_guid(original):
@@ -130,6 +155,15 @@ def main():
         stats["replaced"] += 1
         return anonymize(local, domain)
 
+    def repl_bin(m):
+        local, domain = m.group(1), m.group(2)
+        original = f"{local}@{domain}"
+        if any(rx.search(original) for rx in excludes):
+            stats["kept"] += 1
+            return original
+        stats["replaced"] += 1
+        return anonymize_same_length(local, domain)
+
     def repl_guid(m):
         original = m.group(0)
         if any(rx.search(original) for rx in excludes):
@@ -146,12 +180,16 @@ def main():
             if m:
                 current_table = m.group(1).lower()
             new_line = line
+            is_bin = ("@" in line or "-" in line) and CTRL_RE.search(line) is not None
             if "@" in new_line:
-                new_line = EMAIL_RE.sub(repl, new_line)
+                # ligne binaire (BLOB en clair) : pseudonyme de même longueur, offsets du fichier préservés
+                new_line = EMAIL_RE.sub(repl_bin if is_bin else repl, new_line)
             if args.guid and "-" in new_line and (not guid_tables or current_table in guid_tables):
-                new_line = GUID_RE.sub(repl_guid, new_line)
-            if new_line != line and CTRL_RE.search(line):
+                new_line = GUID_RE.sub(repl_guid, new_line)   # un UUID anonymisé fait toujours 36 caractères
+            if new_line != line and is_bin:
                 stats["binary_modified"] += 1
+                if len(new_line) != len(line):
+                    stats["binary_resized"] += 1
             fout.write(new_line)
 
     if args.map:
@@ -159,6 +197,8 @@ def main():
             fmap.write("original;anonymise\n")
             for original, anon in sorted(mapping.items()):
                 fmap.write(f"{original};{anon}\n")
+            for original, anon in sorted(mapping_bin.items()):
+                fmap.write(f"{original};{anon};dans un fichier binaire, longueur conservee\n")
             for original, anon in sorted(guid_mapping.items()):
                 fmap.write(f"{original};{anon}\n")
 
@@ -166,7 +206,7 @@ def main():
         sys.stderr.write(
             f"lignes traitées : {stats['lines']}\n"
             f"occurrences remplacées : {stats['replaced']}\n"
-            f"adresses distinctes anonymisées : {len(mapping)}\n"
+            f"adresses distinctes anonymisées : {len(set(mapping) | set(mapping_bin))}\n"
             f"occurrences conservées (--exclude) : {stats['kept']}\n"
         )
         if args.guid:
@@ -177,9 +217,15 @@ def main():
             )
         if stats["binary_modified"]:
             sys.stderr.write(
-                f"ATTENTION : {stats['binary_modified']} ligne(s) contenant des octets de contrôle "
-                "(BLOB binaires ?) ont été modifiées. Un motif ressemblant à un e-mail ou un GUID dans un BLOB "
-                "a pu être remplacé : vérifier ces lignes ou exclure le motif avec --exclude.\n"
+                f"NOTE : {stats['binary_modified']} ligne(s) contenant des octets de contrôle (fichiers binaires "
+                f"stockés en clair : PDF, images…) ont été modifiées, {len(mapping_bin)} adresse(s) distincte(s) "
+                "remplacée(s) par un pseudonyme de même longueur pour préserver les offsets du fichier.\n"
+            )
+        if stats["binary_resized"]:
+            sys.stderr.write(
+                f"ATTENTION : {stats['binary_resized']} ligne(s) binaire(s) ont changé de longueur : "
+                "un motif a été remplacé sans conservation de longueur, le fichier peut être corrompu. "
+                "Vérifier ces lignes ou exclure le motif avec --exclude.\n"
             )
 
 

@@ -44,6 +44,12 @@ L'utilisateur peut lever cette règle explicitement pour une commande donnée.
   Il fait environ 30 caractères et tient dans les `VARCHAR` usuels.
 - **Pas de faux positifs** sur `DEFINER=`root`@`localhost`` ou `'user'@'%'` : le domaine
   doit avoir un TLD.
+- **Fichiers binaires stockés en clair** (`core_physical_file.file_value` : PDF, images) : une
+  adresse en clair dans une ligne contenant des octets de contrôle est remplacée par un pseudonyme
+  de **même longueur** (`5d180b40@example.org`, `56062@x.fr`), pour ne pas décaler les offsets
+  internes du fichier. Cas réel : un lien `mailto:` dans un PDF généré. Le script le signale par
+  une ligne `NOTE :` ; un `ATTENTION :` indique au contraire qu'une ligne binaire a changé de
+  longueur, ce qui ne doit pas arriver.
 - **Entrées/sorties** : `.sql`, `.sql.gz`, stdin/stdout.
 
 ## Usage
@@ -113,10 +119,12 @@ Puis, base chargée, vérifier quelles colonnes et quelles questions portent ces
    d'usagers doivent aussi être anonymisés : inventorier alors les tables (section précédente).
 2. Lancer le script avec `--salt` si le dump sort du périmètre de l'équipe (ticket,
    prestataire). Sans `--map`, sauf demande explicite.
-3. Lire les statistiques sur stderr : elles ne contiennent que des compteurs. Un message `ATTENTION : N ligne(s) contenant des
-   octets de contrôle ... ont été modifiées` signale qu'un motif ressemblant à un e-mail a
-   été remplacé dans un BLOB binaire (PDF, image stockés en base) : comparer ces lignes
-   entre source et sortie, et exclure le motif avec `--exclude` si c'est du bruit.
+3. Lire les statistiques sur stderr : elles ne contiennent que des compteurs. Une ligne
+   `NOTE : N ligne(s) contenant des octets de contrôle ... même longueur` est normale : une
+   adresse en clair dans un fichier stocké en base a été pseudonymisée sans changer la taille du
+   fichier. Un `ATTENTION : ... ont changé de longueur` demande vérification : comparer la
+   longueur des lignes concernées entre source et sortie (jamais leur contenu), et exclure le
+   motif avec `--exclude` si c'est du bruit.
 4. Vérifier qu'il ne reste aucune adresse réelle (`-a` force le mode texte, sinon grep se
    tait sur un dump contenant des BLOB) :
 
@@ -145,8 +153,8 @@ Puis, base chargée, vérifier quelles colonnes et quelles questions portent ces
   ne trouveront personne en local. C'est le but, mais à savoir pour les tests.
 - Ne détecte pas les adresses stockées en **binaire ou hexadécimal** (`--hex-blob` sur
   des colonnes texte, BLOB sérialisés, base64).
-- Inversement, un BLOB binaire stocké en clair peut contenir par hasard un motif valide
-  d'e-mail : il serait remplacé et le BLOB corrompu. Le script avertit sur stderr quand
-  une ligne contenant des octets de contrôle est modifiée (voir procédure).
+- Dans un fichier binaire stocké en clair, seule une adresse en zone texte non compressée
+  (métadonnées PDF, lien `mailto:`, XML) est visible et remplacée à longueur constante. Une
+  adresse dans un flux compressé ou une image reste en clair pour qui décompresse le fichier.
 - Un e-mail scindé sur deux lignes (retour à la ligne dans une valeur `TEXT`) n'est pas
   reconnu. Rare dans un dump `mysqldump` standard, qui échappe `\n`.
